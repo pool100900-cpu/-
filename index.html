@@ -1,1536 +1,399 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-
-<title>Adventure 2D</title>
-
-<style>
-html,body{
-    margin:0;
-    padding:0;
-    width:100%;
-    height:100%;
-    overflow:hidden;
-    background:#65d7ff;
-    touch-action:none;
-}
-
-canvas{
-    display:block;
-    width:100%;
-    height:100%;
-}
-
-#hud{
-    position:fixed;
-    top:10px;
-    left:10px;
-    right:10px;
-    display:flex;
-    justify-content:space-between;
-    color:white;
-    font-family:Arial;
-    font-weight:bold;
-    font-size:16px;
-    z-index:5;
-    text-shadow:2px 2px 3px #000;
-}
-
-#hud div{
-    background:#0008;
-    padding:8px 12px;
-    border-radius:12px;
-}
-
-#menu{
-    position:fixed;
-    inset:0;
-    background:linear-gradient(#55cfff,#c5f3ff);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    flex-direction:column;
-    z-index:20;
-    font-family:Arial;
-    text-align:center;
-}
-
-#menu h1{
-    color:white;
-    font-size:42px;
-    text-shadow:3px 4px 5px #467;
-}
-
-#menu p{
-    color:white;
-    font-size:18px;
-}
-
-#start{
-    border:0;
-    border-radius:20px;
-    padding:15px 35px;
-    font-size:20px;
-    font-weight:bold;
-    background:#ffd83d;
-}
-
-#buttons{
-    position:fixed;
-    bottom:15px;
-    left:15px;
-    right:15px;
-    height:90px;
-    z-index:10;
-}
-
-.btn{
-    position:absolute;
-    width:70px;
-    height:70px;
-    border:0;
-    border-radius:50%;
-    background:#ffffffcc;
-    font-size:30px;
-    font-weight:bold;
-}
-
-#left{
-    left:0;
-}
-
-#right{
-    left:80px;
-}
-
-#jump{
-    right:0;
-    background:#ffd83d;
-    font-size:18px;
-}
-
-#end{
-    display:none;
-    position:fixed;
-    inset:0;
-    z-index:30;
-    background:#0009;
-    color:white;
-    font-family:Arial;
-    align-items:center;
-    justify-content:center;
-    flex-direction:column;
-}
-
-#restart{
-    border:0;
-    padding:14px 30px;
-    border-radius:15px;
-    font-size:18px;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Snake 2D Classic - With Pause</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            touch-action: none;
+            user-select: none;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0f172a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 400px;
+            padding: 10px;
+        }
+        #header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            background: #1e293b;
+            padding: 10px 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+        .score-box {
+            font-size: 15px;
+            font-weight: bold;
+        }
+        .score-val {
+            color: #38bdf8;
+        }
+        #pause-btn {
+            background: #38bdf8;
+            color: #020617;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 14px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 0 #0284c7;
+        }
+        #pause-btn:active {
+            transform: translateY(2px);
+            box-shadow: none;
+        }
+        #canvas-wrapper {
+            position: relative;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+        canvas {
+            background-color: #020617;
+            border: 3px solid #334155;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            max-width: 100%;
+        }
+        #pause-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(2, 6, 23, 0.75);
+            border-radius: 12px;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            color: #38bdf8;
+            font-size: 24px;
+            font-weight: bold;
+            pointer-events: none;
+        }
+        #dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 8px;
+            width: 200px;
+            height: 200px;
+            margin-top: 15px;
+        }
+        .btn {
+            background: #334155;
+            border: none;
+            border-radius: 12px;
+            color: #f8fafc;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 0 #1e293b;
+            transition: all 0.05s ease;
+        }
+        .btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #1e293b;
+            background: #38bdf8;
+            color: #020617;
+        }
+        #btn-up { grid-column: 2; grid-row: 1; }
+        #btn-left { grid-column: 1; grid-row: 2; }
+        #btn-right { grid-column: 3; grid-row: 2; }
+        #btn-down { grid-column: 2; grid-row: 3; }
+    </style>
 </head>
-
 <body>
 
-<canvas id="game"></canvas>
+<div id="game-container">
+    <div id="header">
+        <div class="score-box">النتيجة: <span id="score" class="score-val">0</span></div>
+        <button id="pause-btn">توقف ⏸</button>
+        <div class="score-box">أعلى: <span id="high-score" class="score-val">0</span></div>
+    </div>
 
-<div id="hud">
-    <div>❤️ <span id="life">3</span></div>
-    <div>⭐ <span id="star">0</span></div>
-    <div>🏆 <span id="score">0</span></div>
-    <div>🌍 <span id="level">1</span></div>
-</div>
+    <div id="canvas-wrapper">
+        <canvas id="gameCanvas" width="360" height="360"></canvas>
+        <div id="pause-overlay">موقوفة مؤقتاً ⏸</div>
+    </div>
 
-<div id="menu">
-    <h1>🌈 Adventure 2D</h1>
-    <p>مغامرة عالم المنصات</p>
-    <p>اجمع النجوم وتغلب على الوحوش</p>
-    <button id="start">ابدأ اللعب</button>
-</div>
-
-<div id="buttons">
-    <button class="btn" id="left">◀</button>
-    <button class="btn" id="right">▶</button>
-    <button class="btn" id="jump">قفز</button>
-</div>
-
-<div id="end">
-    <h1 id="endTitle">انتهت اللعبة</h1>
-    <p id="endText"></p>
-    <button id="restart">إعادة اللعب</button>
+    <div id="dpad">
+        <button class="btn" id="btn-up">▲</button>
+        <button class="btn" id="btn-left">◀</button>
+        <button class="btn" id="btn-right">▶</button>
+        <button class="btn" id="btn-down">▼</button>
+    </div>
 </div>
 
 <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreElement = document.getElementById('score');
+    const highScoreElement = document.getElementById('high-score');
+    const pauseBtn = document.getElementById('pause-btn');
+    const pauseOverlay = document.getElementById('pause-overlay');
 
-/* =========================
-CANVAS
-========================= */
+    const GRID_SIZE = 18;
+    const TILE_SIZE = canvas.width / GRID_SIZE;
 
-var canvas =
-document.getElementById("game");
+    let snake = [{ x: 9, y: 9 }, { x: 9, y: 10 }, { x: 9, y: 11 }];
+    let food = { x: 5, y: 5 };
+    let dx = 0;
+    let dy = -1;
+    let nextDx = 0;
+    let nextDy = -1;
+    let score = 0;
+    let highScore = localStorage.getItem('snake_high_score') || 0;
+    let gameLoop = null;
+    let speed = 120;
+    let isPaused = false;
 
-var ctx =
-canvas.getContext("2d");
+    highScoreElement.innerText = highScore;
 
-var W=window.innerWidth;
-var H=window.innerHeight;
+    // --- محرك الصوت ---
+    let audioCtx = null;
 
-function resize(){
-
-    W=window.innerWidth;
-    H=window.innerHeight;
-
-    canvas.width=W;
-    canvas.height=H;
-}
-
-resize();
-
-window.addEventListener(
-"resize",
-resize
-);
-
-
-/* =========================
-INPUT
-========================= */
-
-var left=false;
-var right=false;
-var jump=false;
-
-function button(id,down,up){
-
-    var b=document.getElementById(id);
-
-    b.addEventListener(
-        "pointerdown",
-        function(e){
-            e.preventDefault();
-            down();
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
-    );
-
-    b.addEventListener(
-        "pointerup",
-        function(e){
-            e.preventDefault();
-            up();
-        }
-    );
-
-    b.addEventListener(
-        "pointercancel",
-        up
-    );
-}
-
-button(
-"left",
-function(){left=true},
-function(){left=false}
-);
-
-button(
-"right",
-function(){right=true},
-function(){right=false}
-);
-
-button(
-"jump",
-function(){jump=true},
-function(){jump=false}
-);
-
-
-/* لوحة المفاتيح */
-
-window.addEventListener(
-"keydown",
-function(e){
-
-    if(e.key=="ArrowLeft")
-        left=true;
-
-    if(e.key=="ArrowRight")
-        right=true;
-
-    if(e.key=="ArrowUp" || e.key==" ")
-        jump=true;
-});
-
-window.addEventListener(
-"keyup",
-function(e){
-
-    if(e.key=="ArrowLeft")
-        left=false;
-
-    if(e.key=="ArrowRight")
-        right=false;
-
-    if(e.key=="ArrowUp" || e.key==" ")
-        jump=false;
-});
-
-
-/* =========================
-GAME
-========================= */
-
-var playing=false;
-
-var level=1;
-
-var lives=3;
-
-var score=0;
-
-var stars=0;
-
-var camera=0;
-
-var worldWidth=5000;
-
-
-/* =========================
-PLAYER
-========================= */
-
-var player={
-    x:150,
-    y:300,
-    w:45,
-    h:65,
-
-    vx:0,
-    vy:0,
-
-    speed:.7,
-    maxSpeed:7,
-
-    grounded:false,
-
-    direction:1,
-
-    invincible:0
-};
-
-
-/* =========================
-OBJECTS
-========================= */
-
-var platforms=[];
-var enemies=[];
-var items=[];
-
-
-/* =========================
-CREATE PLATFORM
-========================= */
-
-function addPlatform(x,y,w,h){
-
-    platforms.push({
-        x:x,
-        y:y,
-        w:w,
-        h:h
-    });
-}
-
-
-/* =========================
-CREATE ENEMY
-========================= */
-
-function addEnemy(x,y){
-
-    enemies.push({
-        x:x,
-        y:y,
-        w:45,
-        h:40,
-        vx:-1.2,
-        alive:true
-    });
-}
-
-
-/* =========================
-CREATE STAR
-========================= */
-
-function addStar(x,y){
-
-    items.push({
-        x:x,
-        y:y,
-        r:13,
-        taken:false
-    });
-}
-
-
-/* =========================
-LEVEL
-========================= */
-
-function createLevel(){
-
-    platforms=[];
-    enemies=[];
-    items=[];
-
-    worldWidth=
-        3500+
-        level*600;
-
-
-    /* الأرض */
-
-    addPlatform(
-        0,
-        560,
-        worldWidth,
-        100
-    );
-
-
-    /* منصات */
-
-    addPlatform(300,450,200,30);
-    addPlatform(650,370,220,30);
-    addPlatform(1000,450,200,30);
-    addPlatform(1350,330,240,30);
-    addPlatform(1750,420,230,30);
-    addPlatform(2100,300,230,30);
-    addPlatform(2450,430,220,30);
-    addPlatform(2800,350,230,30);
-    addPlatform(3200,450,250,30);
-
-
-    if(level>=2){
-
-        addPlatform(
-            1150,
-            250,
-            180,
-            30
-        );
-
-        addPlatform(
-            1900,
-            220,
-            180,
-            30
-        );
-
-        addPlatform(
-            2700,
-            220,
-            180,
-            30
-        );
-    }
-
-
-    if(level>=3){
-
-        addPlatform(
-            1550,
-            180,
-            180,
-            30
-        );
-
-        addPlatform(
-            2350,
-            170,
-            180,
-            30
-        );
-
-        addPlatform(
-            3050,
-            190,
-            180,
-            30
-        );
-    }
-
-
-    /* أعداء */
-
-    addEnemy(500,520);
-    addEnemy(800,330);
-    addEnemy(1100,410);
-    addEnemy(1450,290);
-    addEnemy(1850,370);
-    addEnemy(2200,250);
-    addEnemy(2550,380);
-    addEnemy(2900,310);
-    addEnemy(3300,410);
-
-
-    if(level>=2){
-
-        addEnemy(1300,520);
-        addEnemy(2000,520);
-        addEnemy(3000,520);
-    }
-
-
-    if(level>=3){
-
-        addEnemy(1650,140);
-        addEnemy(2450,130);
-        addEnemy(3150,150);
-    }
-
-
-    /* النجوم */
-
-    for(
-        var x=250;
-        x<worldWidth-200;
-        x+=230
-    ){
-
-        addStar(
-            x,
-            400+
-            Math.sin(x*.02)*80
-        );
-    }
-}
-
-
-/* =========================
-COLLISION
-========================= */
-
-function collide(a,b){
-
-    return(
-        a.x < b.x+b.w &&
-        a.x+a.w > b.x &&
-        a.y < b.y+b.h &&
-        a.y+a.h > b.y
-    );
-}
-
-
-/* =========================
-UPDATE PLAYER
-========================= */
-
-function updatePlayer(){
-
-    if(left)
-        player.vx-=player.speed;
-
-    if(right)
-        player.vx+=player.speed;
-
-
-    if(!left && !right)
-        player.vx*=.82;
-
-
-    if(player.vx>
-        player.maxSpeed)
-        player.vx=
-            player.maxSpeed;
-
-
-    if(player.vx<
-        -player.maxSpeed)
-        player.vx=
-            -player.maxSpeed;
-
-
-    if(player.vx>0.2)
-        player.direction=1;
-
-    if(player.vx<-0.2)
-        player.direction=-1;
-
-
-    if(
-        jump &&
-        player.grounded
-    ){
-
-        player.vy=-15;
-
-        player.grounded=false;
-    }
-
-
-    player.vy+=.65;
-
-
-    if(player.vy>18)
-        player.vy=18;
-
-
-    player.x+=player.vx;
-
-    player.y+=player.vy;
-
-
-    player.grounded=false;
-
-
-    for(
-        var i=0;
-        i<platforms.length;
-        i++
-    ){
-
-        var p=platforms[i];
-
-
-        if(
-            player.x+player.w>p.x &&
-            player.x<p.x+p.w &&
-            player.y+player.h>p.y &&
-            player.y+player.h<
-                p.y+p.h+25 &&
-            player.vy>=0
-        ){
-
-            player.y=
-                p.y-player.h;
-
-            player.vy=0;
-
-            player.grounded=true;
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
         }
     }
 
+    function playEatSound() {
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
 
-    if(player.x<0)
-        player.x=0;
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1000, audioCtx.currentTime + 0.1);
 
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
 
-    if(player.x>
-        worldWidth-player.w)
-        player.x=
-            worldWidth-player.w;
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
 
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.1);
+    }
 
-    if(player.y>700)
-        damage();
+    function playGameOverSound() {
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
 
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(250, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.4);
 
-    if(player.invincible>0)
-        player.invincible--;
-}
+        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
 
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
 
-/* =========================
-ENEMIES
-========================= */
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.4);
+    }
 
-function updateEnemies(){
+    // --- رسم العناصر ---
+    function drawTile(x, y, color, isHead = false) {
+        ctx.fillStyle = color;
+        const px = x * TILE_SIZE;
+        const py = y * TILE_SIZE;
+        const radius = isHead ? 6 : 4;
+        
+        ctx.beginPath();
+        ctx.roundRect(px + 1, py + 1, TILE_SIZE - 2, TILE_SIZE - 2, radius);
+        ctx.fill();
+    }
 
-    for(
-        var i=0;
-        i<enemies.length;
-        i++
-    ){
+    function spawnFood() {
+        while (true) {
+            food.x = Math.floor(Math.random() * GRID_SIZE);
+            food.y = Math.floor(Math.random() * GRID_SIZE);
+            const inSnake = snake.some(segment => segment.x === food.x && segment.y === food.y);
+            if (!inSnake) break;
+        }
+    }
 
-        var e=enemies[i];
+    function togglePause() {
+        initAudio();
+        isPaused = !isPaused;
+        if (isPaused) {
+            pauseBtn.innerText = 'تشغيل ▶';
+            pauseOverlay.style.display = 'flex';
+        } else {
+            pauseBtn.innerText = 'توقف ⏸';
+            pauseOverlay.style.display = 'none';
+        }
+    }
 
-        if(!e.alive)
-            continue;
+    function update() {
+        if (isPaused) return;
 
+        dx = nextDx;
+        dy = nextDy;
 
-        e.x+=e.vx;
+        const head = { x: snake[0].x + dx, y: snake[0].y + dy };
 
+        if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) {
+            return gameOver();
+        }
 
-        /* حدود بسيطة */
-
-        if(e.x<0 ||
-           e.x>worldWidth-e.w)
-            e.vx*=-1;
-
-
-        if(
-            player.invincible<=0 &&
-            collide(player,e)
-        ){
-
-            if(
-                player.vy>2 &&
-                player.y+player.h<
-                e.y+20
-            ){
-
-                e.alive=false;
-
-                player.vy=-10;
-
-                score+=100;
-
-            }else{
-
-                damage();
-
+        for (let i = 0; i < snake.length; i++) {
+            if (snake[i].x === head.x && snake[i].y === head.y) {
+                return gameOver();
             }
         }
+
+        snake.unshift(head);
+
+        if (head.x === food.x && head.y === food.y) {
+            score += 10;
+            scoreElement.innerText = score;
+            if (score > highScore) {
+                highScore = score;
+                highScoreElement.innerText = highScore;
+                localStorage.setItem('snake_high_score', highScore);
+            }
+            playEatSound();
+            spawnFood();
+        } else {
+            snake.pop();
+        }
+
+        draw();
     }
-}
 
+    function draw() {
+        ctx.fillStyle = '#020617';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-/* =========================
-ITEMS
-========================= */
+        ctx.strokeStyle = '#0f172a';
+        for (let i = 0; i < canvas.width; i += TILE_SIZE) {
+            ctx.beginPath();
+            ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height);
+            ctx.moveTo(0, i); ctx.lineTo(canvas.width, i);
+            ctx.stroke();
+        }
 
-function updateItems(){
+        drawTile(food.x, food.y, '#ef4444');
 
-    for(
-        var i=0;
-        i<items.length;
-        i++
-    ){
+        snake.forEach((segment, index) => {
+            const color = index === 0 ? '#38bdf8' : '#0284c7';
+            drawTile(segment.x, segment.y, color, index === 0);
+        });
+    }
 
-        var s=items[i];
-
-        if(s.taken)
-            continue;
-
-
-        var dx=
-            player.x+
-            player.w/2-
-            s.x;
-
-        var dy=
-            player.y+
-            player.h/2-
-            s.y;
-
-
-        if(
-            Math.sqrt(
-                dx*dx+dy*dy
-            )<35
-        ){
-
-            s.taken=true;
-
-            stars++;
-
-            score+=50;
+    function setDirection(newDx, newDy) {
+        if (isPaused) return;
+        initAudio();
+        if (newDx !== -dx || newDy !== -dy) {
+            nextDx = newDx;
+            nextDy = newDy;
         }
     }
-}
 
-
-/* =========================
-DAMAGE
-========================= */
-
-function damage(){
-
-    if(player.invincible>0)
-        return;
-
-
-    lives--;
-
-    updateHUD();
-
-
-    if(lives<=0){
-
-        playing=false;
-
-        document.getElementById(
-            "endTitle"
-        ).innerText=
-        "💥 انتهت اللعبة";
-
-        document.getElementById(
-            "endText"
-        ).innerText=
-        "النقاط: "+score;
-
-        document.getElementById(
-            "end"
-        ).style.display="flex";
-
-        return;
+    function gameOver() {
+        playGameOverSound();
+        clearInterval(gameLoop);
+        setTimeout(() => {
+            alert(`انتهت اللعبة!\nالنتيجة: ${score}`);
+            resetGame();
+        }, 100);
     }
 
+    function resetGame() {
+        snake = [{ x: 9, y: 9 }, { x: 9, y: 10 }, { x: 9, y: 11 }];
+        dx = 0; dy = -1;
+        nextDx = 0; nextDy = -1;
+        score = 0;
+        isPaused = false;
+        pauseBtn.innerText = 'توقف ⏸';
+        pauseOverlay.style.display = 'none';
+        scoreElement.innerText = score;
+        spawnFood();
+        draw();
+        gameLoop = setInterval(update, speed);
+    }
 
-    player.x=
-        Math.max(
-            100,
-            player.x-300
-        );
+    // --- التحكم وتحديد الاتجاهات ---
+    pauseBtn.onclick = togglePause;
 
-    player.y=200;
-
-    player.vx=0;
-
-    player.vy=0;
-
-    player.invincible=120;
-}
-
-
-/* =========================
-LEVEL CHECK
-========================= */
-
-function checkLevel(){
-
-    if(
-        player.x>
-        worldWidth-180
-    ){
-
-        if(level<3){
-
-            level++;
-
-            createLevel();
-
-            player.x=100;
-
-            player.y=250;
-
-        }else{
-
-            playing=false;
-
-            document.getElementById(
-                "endTitle"
-            ).innerText=
-            "🏆 فزت!";
-
-            document.getElementById(
-                "endText"
-            ).innerText=
-            "أكملت المراحل الثلاث! النقاط: "
-            +score;
-
-            document.getElementById(
-                "end"
-            ).style.display="flex";
+    window.addEventListener('keydown', e => {
+        initAudio();
+        if (e.key === ' ' || e.code === 'Space') {
+            togglePause();
+            return;
         }
-    }
-}
-
-
-/* =========================
-CAMERA
-========================= */
-
-function updateCamera(){
-
-    camera=
-        player.x-
-        W*.35;
-
-
-    if(camera<0)
-        camera=0;
-
-
-    if(camera>
-        worldWidth-W)
-        camera=
-            worldWidth-W;
-}
-
-
-/* =========================
-DRAW BACKGROUND
-========================= */
-
-function drawBackground(){
-
-    var g=
-        ctx.createLinearGradient(
-            0,
-            0,
-            0,
-            H
-        );
-
-    g.addColorStop(
-        0,
-        "#54cfff"
-    );
-
-    g.addColorStop(
-        1,
-        "#d9f8ff"
-    );
-
-    ctx.fillStyle=g;
-
-    ctx.fillRect(
-        0,
-        0,
-        W,
-        H
-    );
-
-
-    /* الشمس */
-
-    ctx.fillStyle="#ffe66d";
-
-    ctx.beginPath();
-
-    ctx.arc(
-        W-90,
-        90,
-        45,
-        0,
-        Math.PI*2
-    );
-
-    ctx.fill();
-
-
-    /* السحب */
-
-    drawCloud(
-        150-camera*.15,
-        120
-    );
-
-    drawCloud(
-        600-camera*.15,
-        170
-    );
-
-    drawCloud(
-        1100-camera*.15,
-        100
-    );
-
-    drawCloud(
-        1700-camera*.15,
-        150
-    );
-}
-
-
-function drawCloud(x,y){
-
-    ctx.fillStyle="#fff";
-
-    ctx.beginPath();
-
-    ctx.arc(x,y,25,0,Math.PI*2);
-
-    ctx.arc(x+30,y-10,35,0,Math.PI*2);
-
-    ctx.arc(x+65,y,25,0,Math.PI*2);
-
-    ctx.fill();
-
-}
-
-
-/* =========================
-DRAW WORLD
-========================= */
-
-function drawWorld(){
-
-    drawBackground();
-
-
-    /* المنصات */
-
-    for(
-        var i=0;
-        i<platforms.length;
-        i++
-    ){
-
-        var p=platforms[i];
-
-        var x=p.x-camera;
-
-
-        if(x+p.w<0 || x>W)
-            continue;
-
-
-        ctx.fillStyle="#925b36";
-
-        ctx.fillRect(
-            x,
-            p.y,
-            p.w,
-            p.h
-        );
-
-
-        ctx.fillStyle="#39a94b";
-
-        ctx.fillRect(
-            x,
-            p.y,
-            p.w,
-            10
-        );
-    }
-
-
-    /* الأشجار */
-
-    for(
-        var tx=50;
-        tx<worldWidth;
-        tx+=260
-    ){
-
-        var sx=
-            tx-camera*.8;
-
-
-        if(
-            sx<-100 ||
-            sx>W+100
-        )
-            continue;
-
-
-        ctx.fillStyle="#70452b";
-
-        ctx.fillRect(
-            sx-10,
-            490,
-            20,
-            70
-        );
-
-
-        ctx.fillStyle="#29984b";
-
-        ctx.beginPath();
-
-        ctx.arc(
-            sx,
-            470,
-            42,
-            0,
-            Math.PI*2
-        );
-
-        ctx.fill();
-
-    }
-
-
-    /* النجوم */
-
-    for(
-        var j=0;
-        j<items.length;
-        j++
-    ){
-
-        var s=items[j];
-
-        if(s.taken)
-            continue;
-
-
-        var sx=s.x-camera;
-
-        var sy=
-            s.y+
-            Math.sin(
-                Date.now()*.005+
-                s.x
-            )*5;
-
-
-        drawStar(
-            sx,
-            sy,
-            16,
-            7
-        );
-    }
-
-
-    /* الأعداء */
-
-    for(
-        var k=0;
-        k<enemies.length;
-        k++
-    ){
-
-        var e=enemies[k];
-
-        if(!e.alive)
-            continue;
-
-
-        var ex=e.x-camera;
-
-
-        ctx.fillStyle="#8d4bd1";
-
-        ctx.beginPath();
-
-        ctx.roundRect(
-            ex,
-            e.y,
-            e.w,
-            e.h,
-            10
-        );
-
-        ctx.fill();
-
-
-        ctx.fillStyle="white";
-
-        ctx.beginPath();
-
-        ctx.arc(
-            ex+12,
-            e.y+13,
-            7,
-            0,
-            Math.PI*2
-        );
-
-        ctx.arc(
-            ex+33,
-            e.y+13,
-            7,
-            0,
-            Math.PI*2
-        );
-
-        ctx.fill();
-
-
-        ctx.fillStyle="#222";
-
-        ctx.beginPath();
-
-        ctx.arc(
-            ex+12,
-            e.y+13,
-            3,
-            0,
-            Math.PI*2
-        );
-
-        ctx.arc(
-            ex+33,
-            e.y+13,
-            3,
-            0,
-            Math.PI*2
-        );
-
-        ctx.fill();
-    }
-
-
-    /* النهاية */
-
-    var fx=
-        worldWidth-120-camera;
-
-
-    if(fx>-100 && fx<W+100){
-
-        ctx.fillStyle="#65452f";
-
-        ctx.fillRect(
-            fx,
-            300,
-            8,
-            260
-        );
-
-
-        ctx.fillStyle="#ff4654";
-
-        ctx.beginPath();
-
-        ctx.moveTo(
-            fx+8,
-            300
-        );
-
-        ctx.lineTo(
-            fx+90,
-            330
-        );
-
-        ctx.lineTo(
-            fx+8,
-            360
-        );
-
-        ctx.fill();
-    }
-
-
-    drawPlayer();
-}
-
-
-/* =========================
-STAR DRAW
-========================= */
-
-function drawStar(
-    x,
-    y,
-    outer,
-    inner
-){
-
-    ctx.fillStyle="#ffe033";
-
-    ctx.beginPath();
-
-    for(
-        var i=0;
-        i<10;
-        i++
-    ){
-
-        var a=
-            -Math.PI/2+
-            i*Math.PI/5;
-
-        var r=
-            i%2===0?
-            outer:
-            inner;
-
-
-        var px=
-            x+
-            Math.cos(a)*r;
-
-        var py=
-            y+
-            Math.sin(a)*r;
-
-
-        if(i===0)
-            ctx.moveTo(px,py);
-        else
-            ctx.lineTo(px,py);
-    }
-
-    ctx.closePath();
-
-    ctx.fill();
-}
-
-
-/* =========================
-PLAYER DRAW
-========================= */
-
-function drawPlayer(){
-
-    if(
-        player.invincible>0 &&
-        Math.floor(
-            player.invincible/8
-        )%2===0
-    )
-        return;
-
-
-    var x=
-        player.x-camera+
-        player.w/2;
-
-    var y=
-        player.y;
-
-
-    ctx.save();
-
-    ctx.translate(
-        x,
-        y
-    );
-
-
-    if(player.direction<0)
-        ctx.scale(-1,1);
-
-
-    /* ظل */
-
-    ctx.fillStyle="#0004";
-
-    ctx.beginPath();
-
-    ctx.ellipse(
-        0,
-        68,
-        25,
-        7,
-        0,
-        0,
-        Math.PI*2
-    );
-
-    ctx.fill();
-
-
-    /* الأرجل */
-
-    ctx.fillStyle="#253a64";
-
-    ctx.fillRect(
-        -17,
-        42,
-        13,
-        23
-    );
-
-    ctx.fillRect(
-        5,
-        42,
-        13,
-        23
-    );
-
-
-    /* الجسم */
-
-    ctx.fillStyle="#218fff";
-
-    ctx.beginPath();
-
-    ctx.roundRect(
-        -22,
-        17,
-        44,
-        32,
-        9
-    );
-
-    ctx.fill();
-
-
-    /* الرأس */
-
-    ctx.fillStyle="#ffd0a0";
-
-    ctx.beginPath();
-
-    ctx.arc(
-        0,
-        6,
-        22,
-        0,
-        Math.PI*2
-    );
-
-    ctx.fill();
-
-
-    /* الشعر */
-
-    ctx.fillStyle="#29354e";
-
-    ctx.beginPath();
-
-    ctx.arc(
-        0,
-        0,
-        23,
-        Math.PI,
-        Math.PI*2
-    );
-
-    ctx.fill();
-
-
-    /* العين */
-
-    ctx.fillStyle="#222";
-
-    ctx.beginPath();
-
-    ctx.arc(
-        7,
-        7,
-        3,
-        0,
-        Math.PI*2
-    );
-
-    ctx.arc(
-        15,
-        7,
-        3,
-        0,
-        Math.PI*2
-    );
-
-    ctx.fill();
-
-
-    /* الذراع */
-
-    ctx.fillStyle="#218fff";
-
-    ctx.fillRect(
-        -30,
-        20,
-        9,
-        27
-    );
-
-    ctx.fillRect(
-        21,
-        20,
-        9,
-        27
-    );
-
-
-    ctx.restore();
-}
-
-
-/* =========================
-HUD
-========================= */
-
-function updateHUD(){
-
-    document.getElementById(
-        "life"
-    ).innerText=lives;
-
-    document.getElementById(
-        "star"
-    ).innerText=stars;
-
-    document.getElementById(
-        "score"
-    ).innerText=score;
-
-    document.getElementById(
-        "level"
-    ).innerText=level;
-}
-
-
-/* =========================
-GAME LOOP
-========================= */
-
-function loop(){
-
-    if(!playing)
-        return;
-
-
-    updatePlayer();
-
-    updateEnemies();
-
-    updateItems();
-
-    checkLevel();
-
-    updateCamera();
-
-    drawWorld();
-
-    updateHUD();
-
-    requestAnimationFrame(
-        loop
-    );
-}
-
-
-/* =========================
-START
-========================= */
-
-function startGame(){
-
-    lives=3;
-
-    score=0;
-
-    stars=0;
-
-    level=1;
-
-    player.x=150;
-
-    player.y=300;
-
-    player.vx=0;
-
-    player.vy=0;
-
-    createLevel();
-
-    document.getElementById(
-        "menu"
-    ).style.display="none";
-
-    document.getElementById(
-        "end"
-    ).style.display="none";
-
-    playing=true;
-
-    updateHUD();
-
-    loop();
-}
-
-
-document.getElementById(
-    "start"
-).onclick=startGame;
-
-
-document.getElementById(
-    "restart"
-).onclick=startGame;
-
-
-/* أول رسم */
-
-createLevel();
-
-drawWorld();
-
+        switch (e.key) {
+            case 'ArrowUp': case 'w': case 'W': setDirection(0, -1); break;
+            case 'ArrowDown': case 's': case 'S': setDirection(0, 1); break;
+            case 'ArrowLeft': case 'a': case 'A': setDirection(1, 0); break;
+            case 'ArrowRight': case 'd': case 'D': setDirection(-1, 0); break;
+        }
+    });
+
+    document.getElementById('btn-up').onclick = () => setDirection(0, -1);
+    document.getElementById('btn-down').onclick = () => setDirection(0, 1);
+    document.getElementById('btn-left').onclick = () => setDirection(1, 0);
+    document.getElementById('btn-right').onclick = () => setDirection(-1, 0);
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    canvas.addEventListener('touchstart', e => {
+        initAudio();
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+    });
+
+    canvas.addEventListener('touchend', e => {
+        const diffX = e.changedTouches[0].clientX - touchStartX;
+        const diffY = e.changedTouches[0].clientY - touchStartY;
+
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+            if (Math.abs(diffX) > 30) {
+                setDirection(diffX > 0 ? -1 : 1, 0);
+            }
+        } else {
+            if (Math.abs(diffY) > 30) {
+                setDirection(0, diffY > 0 ? 1 : -1);
+            }
+        }
+    });
+
+    spawnFood();
+    draw();
+    gameLoop = setInterval(update, speed);
 </script>
 
 </body>
