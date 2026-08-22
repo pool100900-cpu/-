@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake 2D - 60FPS Ultimate HD (معكوسة الاتجاهات)</title>
+    <title>Snake 2D - Masterpiece Edition</title>
     <style>
         * {
             box-sizing: border-box;
@@ -46,20 +46,20 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
         }
         .score-box {
-            font-size: 15px;
+            font-size: 14px;
             font-weight: bold;
         }
         .score-val {
             color: #38bdf8;
-            font-size: 18px;
+            font-size: 16px;
         }
         #pause-btn {
             background: linear-gradient(135deg, #38bdf8, #0284c7);
             color: #020617;
             border: none;
             border-radius: 8px;
-            padding: 6px 16px;
-            font-size: 14px;
+            padding: 6px 14px;
+            font-size: 13px;
             font-weight: bold;
             cursor: pointer;
             box-shadow: 0 2px 8px rgba(56, 189, 248, 0.4);
@@ -91,7 +91,7 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             z-index: 10;
             padding: 20px;
         }
@@ -157,6 +157,7 @@
             width: 180px;
             height: 180px;
             margin-top: 10px;
+            direction: ltr;
         }
         .btn {
             background: #1e293b;
@@ -168,6 +169,7 @@
             align-items: center;
             justify-content: center;
             box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            cursor: pointer;
         }
         .btn:active {
             transform: translateY(2px);
@@ -185,6 +187,7 @@
 <div id="game-container">
     <div id="header">
         <div class="score-box">النتيجة: <span id="score" class="score-val">0</span></div>
+        <div class="score-box">المرحلة: <span id="level" class="score-val" style="color:#a855f7;">1</span></div>
         <button id="pause-btn">توقف ⏸</button>
         <div class="score-box">أعلى: <span id="high-score" class="score-val">0</span></div>
     </div>
@@ -193,7 +196,7 @@
         <canvas id="gameCanvas" width="480" height="480"></canvas>
         
         <div id="start-menu" class="overlay">
-            <h2>🐍 الأفعى - 60FPS HD</h2>
+            <h2>🐍 الأفعى - Masterpiece</h2>
 
             <div class="select-group">
                 <label>اختر الخريطة:</label>
@@ -207,27 +210,27 @@
             </div>
 
             <div class="select-group">
-                <label>جلد / مظهر الأفعى:</label>
+                <label>جلد / تدرج الأفعى:</label>
                 <select id="skin-select">
-                    <option value="cyan">أزرق سماوي HD 🩵</option>
-                    <option value="neon">نيون متوهج ⚡</option>
-                    <option value="gold">ملكي ذهبي 💎</option>
-                    <option value="fire">أفعى التنين الناري 🔥</option>
+                    <option value="cyan">سماوي متدرج 🩵</option>
+                    <option value="neon">نيون سيبراني ⚡</option>
+                    <option value="gold">ملكي ذهبي فاخر 💎</option>
+                    <option value="fire">التنين الناري المحترق 🔥</option>
                 </select>
             </div>
 
             <div class="select-group">
                 <label>شكل الطعام:</label>
                 <select id="food-select">
-                    <option value="apple">تفاحة حمراء 🍎</option>
+                    <option value="apple">تفاحة حمراء كلاسيكية 🍎</option>
                     <option value="gem">ماسة جوهرة 💎</option>
-                    <option value="star">نجمة سحرية ⭐</option>
-                    <option value="orb">كرة طاقة 🔮</option>
+                    <option value="star">نجمة سحرية متألقة ⭐</option>
+                    <option value="orb">كرة طاقة مضيئة 🔮</option>
                 </select>
             </div>
 
             <div class="select-group">
-                <label>خلفية اللعبة:</label>
+                <label>خلفية اللعبة المتحركة:</label>
                 <select id="bg-select">
                     <option value="cyber">فضاء السايبر 🌌</option>
                     <option value="jungle">غابة استوائية 🌿</option>
@@ -256,6 +259,7 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const scoreElement = document.getElementById('score');
+    const levelElement = document.getElementById('level');
     const highScoreElement = document.getElementById('high-score');
     const pauseBtn = document.getElementById('pause-btn');
     const pauseOverlay = document.getElementById('pause-overlay');
@@ -266,83 +270,94 @@
     const TILE_SIZE = canvas.width / GRID_SIZE;
 
     let snake = [];
-    let food = { x: 5, y: 5 };
+    let food = { x: 5, y: 5, isBig: false };
+    let portalA = { x: 3, y: 3 };
+    let portalB = { x: 20, y: 20 };
     let dx = 0; let dy = -1;
-    let nextDx = 0; let nextDy = -1;
+    let nextDx = 0; nextDy = -1;
     let score = 0;
+    let level = 1;
+    let gameLoopTimeout = null;
+    let currentSpeed = 150;
     let highScore = localStorage.getItem('snake_high_score') || 0;
-    let speed = 140;
-    let lastMoveTime = 0;
     let isPaused = false;
     let gameStarted = false;
     let obstacles = [];
     let particles = [];
-    let bgElements = []; // مصفوفة عناصر الخلفية الجرافيكية
+    let bgElements = [];
+    let portalAngle = 0;
+    let tongueFrame = 0;
+    let bigAppleTimer = 0;
 
     highScoreElement.innerText = highScore;
 
-    // --- المحرك الصوتي ---
     let audioCtx = null;
     function initAudio() {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         if (audioCtx.state === 'suspended') audioCtx.resume();
     }
     
-    function playEatSound() {
+    function playEatSound(isBig = false) {
         initAudio();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(500, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(900, audioCtx.currentTime + 0.08);
-        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+        osc.type = isBig ? 'square' : 'sine';
+        osc.frequency.setValueAtTime(isBig ? 350 : 500, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(isBig ? 900 : 900, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
         osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.08);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
     }
 
-    function playGameOverSound() {
+    function playPortalSound() {
         initAudio();
-        const duration = 0.8;
-        const bufferSize = audioCtx.sampleRate * duration;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+    }
+
+    // صوت فحيح واصطدام أفعى واقعي
+    function playSnakeHissSound() {
+        initAudio();
+        const bufferSize = audioCtx.sampleRate * 0.4;
         const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
         const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
 
         const noise = audioCtx.createBufferSource();
         noise.buffer = buffer;
 
         const filter = audioCtx.createBiquadFilter();
         filter.type = 'bandpass';
-        filter.frequency.setValueAtTime(3500, audioCtx.currentTime);
-        filter.frequency.exponentialRampToValueAtTime(2000, audioCtx.currentTime + duration);
-        filter.Q.setValueAtTime(4, audioCtx.currentTime);
+        filter.frequency.setValueAtTime(1200, audioCtx.currentTime);
+        filter.frequency.linearRampToValueAtTime(400, audioCtx.currentTime + 0.4);
+        filter.Q.value = 3;
 
-        const lfo = audioCtx.createOscillator();
-        lfo.frequency.setValueAtTime(30, audioCtx.currentTime);
-        const lfoGain = audioCtx.createGain();
-        lfoGain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        const gain = audioCtx.createGain();
+        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
 
-        const mainGain = audioCtx.createGain();
-        mainGain.gain.setValueAtTime(0.01, audioCtx.currentTime);
-        mainGain.gain.exponentialRampToValueAtTime(0.5, audioCtx.currentTime + 0.08);
-        mainGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
 
-        lfo.connect(lfoGain); lfoGain.connect(mainGain.gain);
-        noise.connect(filter); filter.connect(mainGain);
-        mainGain.connect(audioCtx.destination);
-
-        lfo.start(); noise.start();
-        lfo.stop(audioCtx.currentTime + duration); noise.stop(audioCtx.currentTime + duration);
+        noise.start();
+        noise.stop(audioCtx.currentTime + 0.4);
     }
 
-    // --- توليد عناصر الخلفيات الجرافيكية ---
     function generateBackgroundElements() {
         bgElements = [];
         const bg = document.getElementById('bg-select').value;
-
         if (bg === 'cyber') {
-            // توليد نجوم وشهب للفضاء
             for (let i = 0; i < 65; i++) {
                 bgElements.push({
                     x: Math.random() * canvas.width,
@@ -353,7 +368,6 @@
                 });
             }
         } else if (bg === 'jungle') {
-            // توليد تفاصيل الغابة (نباتات وأوراق ضوئية)
             for (let i = 0; i < 35; i++) {
                 bgElements.push({
                     x: Math.random() * canvas.width,
@@ -362,19 +376,39 @@
                     alpha: Math.random() * 0.15 + 0.05
                 });
             }
+        } else if (bg === 'slate') {
+            for (let i = 0; i < 20; i++) {
+                bgElements.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    len: Math.random() * 40 + 20,
+                    speed: Math.random() * 1 + 0.5
+                });
+            }
+        } else if (bg === 'dark') {
+            for (let i = 0; i < 12; i++) {
+                bgElements.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    r: Math.random() * 30 + 10,
+                    dx: (Math.random() - 0.5) * 0.2,
+                    dy: (Math.random() - 0.5) * 0.2
+                });
+            }
         }
     }
 
-    // --- بناء الخرائط ---
-    function loadMap() {
-        const mapType = document.getElementById('map-select').value;
+    function loadMap(mapType) {
         obstacles = [];
-
-        if (mapType === 'maze') {
-            for (let i = 3; i < 9; i++) obstacles.push({ x: i, y: 5 });
-            for (let i = 15; i < 21; i++) obstacles.push({ x: i, y: 18 });
+        if (mapType === 'open') {
+            return;
+        } else if (mapType === 'maze') {
+            // جدار مرتب ومنصف بدقة في منتصف الشاشة الأفقي والعمودي
             for (let i = 6; i < 18; i++) {
                 if (i !== 11 && i !== 12) obstacles.push({ x: 12, y: i });
+            }
+            for (let i = 6; i < 18; i++) {
+                if (i !== 11 && i !== 12) obstacles.push({ x: i, y: 12 });
             }
         } else if (mapType === 'box') {
             for (let i = 4; i < 20; i++) {
@@ -384,12 +418,7 @@
                 }
             }
         } else if (mapType === 'pillars') {
-            const pts = [
-                [4,4],[4,5],[5,4],[5,5], 
-                [18,4],[18,5],[19,4],[19,5], 
-                [4,18],[4,19],[5,18],[5,19], 
-                [18,18],[18,19],[19,18],[19,19]
-            ];
+            const pts = [[4,4],[4,5],[5,4],[5,5], [18,4],[18,5],[19,4],[19,5], [4,18],[4,19],[5,18],[5,19], [18,18],[18,19],[19,18],[19,19]];
             pts.forEach(p => obstacles.push({ x: p[0], y: p[1] }));
         } else if (mapType === 'tunnel') {
             for (let i = 0; i < 24; i++) {
@@ -401,15 +430,27 @@
         }
     }
 
-    // --- المؤثرات البصرية ---
-    function addParticles(x, y, color) {
-        for (let i = 0; i < 10; i++) {
+    function spawnPortals() {
+        while (true) {
+            portalA = { x: Math.floor(Math.random() * (GRID_SIZE - 4)) + 2, y: Math.floor(Math.random() * (GRID_SIZE - 4)) + 2 };
+            portalB = { x: Math.floor(Math.random() * (GRID_SIZE - 4)) + 2, y: Math.floor(Math.random() * (GRID_SIZE - 4)) + 2 };
+            
+            let dist = Math.hypot(portalA.x - portalB.x, portalA.y - portalB.y);
+            let notInObstacle = !obstacles.some(o => (o.x === portalA.x && o.y === portalA.y) || (o.x === portalB.x && o.y === portalB.y));
+            let notInSnake = !snake.some(s => (s.x === portalA.x && s.y === portalA.y) || (s.x === portalB.x && s.y === portalB.y));
+            
+            if (dist > 8 && notInObstacle && notInSnake) break;
+        }
+    }
+
+    function addParticles(x, y, color, count = 10) {
+        for (let i = 0; i < count; i++) {
             particles.push({
                 x: x * TILE_SIZE + TILE_SIZE / 2,
                 y: y * TILE_SIZE + TILE_SIZE / 2,
-                vx: (Math.random() - 0.5) * 5,
-                vy: (Math.random() - 0.5) * 5,
-                size: Math.random() * 3 + 1,
+                vx: (Math.random() - 0.5) * 6,
+                vy: (Math.random() - 0.5) * 6,
+                size: Math.random() * 4 + 1,
                 life: 1,
                 color: color
             });
@@ -436,127 +477,71 @@
         });
     }
 
-    function drawBackground() {
-        const bg = document.getElementById('bg-select').value;
-
-        if (bg === 'jungle') {
-            let grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-            grad.addColorStop(0, '#064e3b');
-            grad.addColorStop(1, '#022c22');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // رسم أوراق وأشجار الغابة
-            bgElements.forEach(leaf => {
-                ctx.fillStyle = 'rgba(52, 211, 153, ' + leaf.alpha + ')';
-                ctx.beginPath();
-                ctx.arc(leaf.x, leaf.y, leaf.radius, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
-        } else if (bg === 'cyber') {
-            let grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-            grad.addColorStop(0, '#0b0f19');
-            grad.addColorStop(1, '#020617');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // رسم النجوم التفاعلية بفضاء السايبر
-            bgElements.forEach(star => {
-                star.y += star.speed;
-                if (star.y > canvas.height) star.y = 0;
-
-                ctx.fillStyle = 'rgba(255, 255, 255, ' + star.alpha + ')';
-                ctx.beginPath();
-                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
-            // شبكة النيون النحيفة
-            ctx.strokeStyle = 'rgba(56, 189, 248, 0.04)';
-            ctx.lineWidth = 1;
-            for (let i = 0; i < canvas.width; i += TILE_SIZE) {
-                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
-            }
-
-        } else if (bg === 'slate') {
-            let grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-            grad.addColorStop(0, '#1e293b');
-            grad.addColorStop(1, '#0f172a');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
-            ctx.lineWidth = 1;
-            for (let i = 0; i < canvas.width; i += TILE_SIZE) {
-                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
-            }
-
-        } else {
-            ctx.fillStyle = '#020617';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
-
-        // رسم العقبات إن وجدت
-        obstacles.forEach(o => {
-            const px = o.x * TILE_SIZE;
-            const py = o.y * TILE_SIZE;
-            let g = ctx.createLinearGradient(px, py, px + TILE_SIZE, py + TILE_SIZE);
-            g.addColorStop(0, '#475569');
-            g.addColorStop(1, '#1e293b');
-            ctx.fillStyle = g;
+    function drawPortals() {
+        portalAngle += 0.08;
+        const drawSinglePortal = (p, color1, color2) => {
+            const cx = p.x * TILE_SIZE + TILE_SIZE / 2;
+            const cy = p.y * TILE_SIZE + TILE_SIZE / 2;
+            
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(portalAngle);
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = color1;
+            
+            ctx.strokeStyle = color1;
+            ctx.lineWidth = 3;
             ctx.beginPath();
-            ctx.roundRect(px + 1, py + 1, TILE_SIZE - 2, TILE_SIZE - 2, 4);
-            ctx.fill();
-            ctx.strokeStyle = '#64748b';
+            ctx.arc(0, 0, TILE_SIZE / 2 - 1, 0, Math.PI * 1.5);
             ctx.stroke();
-        });
+
+            ctx.strokeStyle = color2;
+            ctx.beginPath();
+            ctx.arc(0, 0, TILE_SIZE / 4, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        };
+
+        drawSinglePortal(portalA, '#00f2fe', '#4facfe');
+        drawSinglePortal(portalB, '#ff0844', '#ffb199');
     }
 
-    function drawFood(x, y) {
-        const foodType = document.getElementById('food-select').value;
-        const px = x * TILE_SIZE;
-        const py = y * TILE_SIZE;
-        const center = TILE_SIZE / 2;
-
-        ctx.shadowBlur = 10;
-
-        if (foodType === 'gem') {
-            ctx.shadowColor = '#ec4899';
-            ctx.fillStyle = '#ec4899';
-            ctx.beginPath();
-            ctx.moveTo(px + center, py + 2);
-            ctx.lineTo(px + TILE_SIZE - 2, py + center);
-            ctx.lineTo(px + center, py + TILE_SIZE - 2);
-            ctx.lineTo(px + 2, py + center);
-            ctx.closePath();
-            ctx.fill();
-        } else if (foodType === 'star') {
-            ctx.shadowColor = '#eab308';
-            ctx.fillStyle = '#eab308';
-            ctx.beginPath();
-            ctx.arc(px + center, py + center, TILE_SIZE / 2 - 2, 0, Math.PI * 2);
-            ctx.fill();
-        } else if (foodType === 'orb') {
-            ctx.shadowColor = '#3b82f6';
-            let grad = ctx.createRadialGradient(px + center, py + center, 2, px + center, py + center, TILE_SIZE / 2);
-            grad.addColorStop(0, '#93c5fd');
-            grad.addColorStop(1, '#1d4ed8');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(px + center, py + center, TILE_SIZE / 2 - 2, 0, Math.PI * 2);
-            ctx.fill();
-        } else {
-            ctx.shadowColor = '#ef4444';
-            ctx.fillStyle = '#ef4444';
-            ctx.beginPath();
-            ctx.arc(px + center, py + center + 1, (TILE_SIZE / 2) - 2, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = '#22c55e';
-            ctx.beginPath();
-            ctx.arc(px + center + 3, py + 3, 2, 0, Math.PI * 2);
-            ctx.fill();
+    function drawBackground() {
+        const bg = document.getElementById('bg-select').value;
         
+        if (bg === 'jungle') {
+            let grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            grad.addColorStop(0, '#064e3b'); grad.addColorStop(1, '#022c22');
+            ctx.fillStyle = grad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            bgElements.forEach(leaf => {
+                ctx.fillStyle = 'rgba(52, 211, 153, ' + leaf.alpha + ')';
+                ctx.beginPath(); ctx.arc(leaf.x, leaf.y, leaf.radius, 0, Math.PI * 2); ctx.fill();
+            });
+        } else if (bg === 'cyber') {
+            let grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            grad.addColorStop(0, '#0b0f19'); grad.addColorStop(1, '#020617');
+            ctx.fillStyle = grad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            bgElements.forEach(star => {
+                star.y += star.speed; if (star.y > canvas.height) star.y = 0;
+                ctx.fillStyle = 'rgba(255, 255, 255, ' + star.alpha + ')';
+                ctx.beginPath(); ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2); ctx.fill();
+            });
+        } else if (bg === 'slate') {
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.strokeStyle = 'rgba(51, 65, 85, 0.4)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < canvas.width; x += TILE_SIZE) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += TILE_SIZE) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            }
+
+            bgElements.forEach(line => {
+                line.y += line.speed;
+                if (line.y > canvas.height) line.y = -line.len;
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.3)';
+                ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(line.x, line.y); ctx.lineTo(line.x, line.y
