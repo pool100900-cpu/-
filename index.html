@@ -277,8 +277,8 @@
     let nextDx = 0; nextDy = -1;
     let score = 0;
     let level = 1;
-    let gameLoopTimeout = null;
-    let currentSpeed = 150;
+    let moveInterval = 150;
+    let lastMoveTime = 0;
     let highScore = localStorage.getItem('snake_high_score') || 0;
     let isPaused = false;
     let gameStarted = false;
@@ -287,7 +287,6 @@
     let bgElements = [];
     let portalAngle = 0;
     let tongueFrame = 0;
-    let bigAppleTimer = 0;
 
     highScoreElement.innerText = highScore;
 
@@ -323,7 +322,6 @@
         osc.start(); osc.stop(audioCtx.currentTime + 0.15);
     }
 
-    // صوت فحيح واصطدام أفعى واقعي
     function playSnakeHissSound() {
         initAudio();
         const bufferSize = audioCtx.sampleRate * 0.4;
@@ -332,24 +330,19 @@
         for (let i = 0; i < bufferSize; i++) {
             data[i] = Math.random() * 2 - 1;
         }
-
         const noise = audioCtx.createBufferSource();
         noise.buffer = buffer;
-
         const filter = audioCtx.createBiquadFilter();
         filter.type = 'bandpass';
         filter.frequency.setValueAtTime(1200, audioCtx.currentTime);
         filter.frequency.linearRampToValueAtTime(400, audioCtx.currentTime + 0.4);
         filter.Q.value = 3;
-
         const gain = audioCtx.createGain();
         gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-
         noise.connect(filter);
         filter.connect(gain);
         gain.connect(audioCtx.destination);
-
         noise.start();
         noise.stop(audioCtx.currentTime + 0.4);
     }
@@ -403,7 +396,6 @@
         if (mapType === 'open') {
             return;
         } else if (mapType === 'maze') {
-            // جدار مرتب ومنصف بدقة في منتصف الشاشة الأفقي والعمودي
             for (let i = 6; i < 18; i++) {
                 if (i !== 11 && i !== 12) obstacles.push({ x: 12, y: i });
             }
@@ -434,11 +426,9 @@
         while (true) {
             portalA = { x: Math.floor(Math.random() * (GRID_SIZE - 4)) + 2, y: Math.floor(Math.random() * (GRID_SIZE - 4)) + 2 };
             portalB = { x: Math.floor(Math.random() * (GRID_SIZE - 4)) + 2, y: Math.floor(Math.random() * (GRID_SIZE - 4)) + 2 };
-            
             let dist = Math.hypot(portalA.x - portalB.x, portalA.y - portalB.y);
             let notInObstacle = !obstacles.some(o => (o.x === portalA.x && o.y === portalA.y) || (o.x === portalB.x && o.y === portalB.y));
             let notInSnake = !snake.some(s => (s.x === portalA.x && s.y === portalA.y) || (s.x === portalB.x && s.y === portalB.y));
-            
             if (dist > 8 && notInObstacle && notInSnake) break;
         }
     }
@@ -482,33 +472,28 @@
         const drawSinglePortal = (p, color1, color2) => {
             const cx = p.x * TILE_SIZE + TILE_SIZE / 2;
             const cy = p.y * TILE_SIZE + TILE_SIZE / 2;
-            
             ctx.save();
             ctx.translate(cx, cy);
             ctx.rotate(portalAngle);
             ctx.shadowBlur = 12;
             ctx.shadowColor = color1;
-            
             ctx.strokeStyle = color1;
             ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.arc(0, 0, TILE_SIZE / 2 - 1, 0, Math.PI * 1.5);
             ctx.stroke();
-
             ctx.strokeStyle = color2;
             ctx.beginPath();
             ctx.arc(0, 0, TILE_SIZE / 4, 0, Math.PI * 2);
             ctx.stroke();
             ctx.restore();
         };
-
         drawSinglePortal(portalA, '#00f2fe', '#4facfe');
         drawSinglePortal(portalB, '#ff0844', '#ffb199');
     }
 
     function drawBackground() {
         const bg = document.getElementById('bg-select').value;
-        
         if (bg === 'jungle') {
             let grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
             grad.addColorStop(0, '#064e3b'); grad.addColorStop(1, '#022c22');
@@ -529,7 +514,6 @@
         } else if (bg === 'slate') {
             ctx.fillStyle = '#0f172a';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
             ctx.strokeStyle = 'rgba(51, 65, 85, 0.4)';
             ctx.lineWidth = 1;
             for (let x = 0; x < canvas.width; x += TILE_SIZE) {
@@ -538,10 +522,15 @@
             for (let y = 0; y < canvas.height; y += TILE_SIZE) {
                 ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
             }
-
             bgElements.forEach(line => {
                 line.y += line.speed;
                 if (line.y > canvas.height) line.y = -line.len;
                 ctx.strokeStyle = 'rgba(56, 189, 248, 0.3)';
                 ctx.lineWidth = 2;
-                ctx.beginPath(); ctx.moveTo(line.x, line.y); ctx.lineTo(line.x, line.y
+                ctx.beginPath(); ctx.moveTo(line.x, line.y); ctx.lineTo(line.x, line.y + line.len); ctx.stroke();
+            });
+        } else {
+            ctx.fillStyle = '#020617';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            bgElements.forEach(orb => {
+                o
