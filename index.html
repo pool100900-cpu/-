@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake 2D - Deluxe Skins</title>
+    <title>Snake 2D - Realistic Snake Sound</title>
     <style>
         * {
             box-sizing: border-box;
@@ -243,11 +243,13 @@
 
     highScoreElement.innerText = highScore;
 
+    // --- المحرك الصوتي المطور ---
     let audioCtx = null;
     function initAudio() {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         if (audioCtx.state === 'suspended') audioCtx.resume();
     }
+    
     function playEatSound() {
         initAudio();
         const osc = audioCtx.createOscillator();
@@ -260,17 +262,51 @@
         osc.connect(gain); gain.connect(audioCtx.destination);
         osc.start(); osc.stop(audioCtx.currentTime + 0.1);
     }
+
+    // محاكاة واقعية لصوت فحيح الأفعى الأصلي
     function playGameOverSound() {
         initAudio();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(250, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.4);
-        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+        const duration = 0.8;
+        const bufferSize = audioCtx.sampleRate * duration;
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = audioCtx.createBufferSource();
+        noise.buffer = buffer;
+
+        // فلتر التردد الحاد المتطابق مع فحيح الزواحف
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(3500, audioCtx.currentTime);
+        filter.frequency.exponentialRampToValueAtTime(2200, audioCtx.currentTime + duration);
+        filter.Q.setValueAtTime(4, audioCtx.currentTime);
+
+        // اهتزاز خفيف للضجيج (LFO) لإعطاء تأثير اندفاع الهواء الطبيعي
+        const lfo = audioCtx.createOscillator();
+        lfo.frequency.setValueAtTime(30, audioCtx.currentTime);
+        const lfoGain = audioCtx.createGain();
+        lfoGain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+
+        const mainGain = audioCtx.createGain();
+        mainGain.gain.setValueAtTime(0.01, audioCtx.currentTime);
+        mainGain.gain.exponentialRampToValueAtTime(0.6, audioCtx.currentTime + 0.08);
+        mainGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+        lfo.connect(lfoGain);
+        lfoGain.connect(mainGain.gain);
+
+        noise.connect(filter);
+        filter.connect(mainGain);
+        mainGain.connect(audioCtx.destination);
+
+        lfo.start();
+        noise.start();
+        lfo.stop(audioCtx.currentTime + duration);
+        noise.stop(audioCtx.currentTime + duration);
     }
 
     function drawBackground() {
@@ -527,7 +563,6 @@
         }
     });
 
-    // تم عكس اتجاهات أزرار التحكم واللمس بناءً على طلبك
     document.getElementById('btn-up').onclick = () => setDirection(0, -1);
     document.getElementById('btn-down').onclick = () => setDirection(0, 1);
     document.getElementById('btn-left').onclick = () => setDirection(1, 0);
