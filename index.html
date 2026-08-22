@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake 2D Classic - With Pause</title>
+    <title>Snake 2D - Deluxe Skins</title>
     <style>
         * {
             box-sizing: border-box;
@@ -30,6 +30,7 @@
             width: 100%;
             max-width: 400px;
             padding: 10px;
+            position: relative;
         }
         #header {
             width: 100%;
@@ -60,10 +61,6 @@
             cursor: pointer;
             box-shadow: 0 2px 0 #0284c7;
         }
-        #pause-btn:active {
-            transform: translateY(2px);
-            box-shadow: none;
-        }
         #canvas-wrapper {
             position: relative;
             width: 100%;
@@ -77,21 +74,67 @@
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
             max-width: 100%;
         }
-        #pause-overlay {
+        .overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(2, 6, 23, 0.75);
+            background: rgba(15, 23, 42, 0.95);
             border-radius: 12px;
-            display: none;
+            display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
+            gap: 12px;
+            z-index: 10;
+        }
+        .overlay h2 {
+            margin: 0 0 10px 0;
+            color: #38bdf8;
+        }
+        .select-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            width: 80%;
+        }
+        .select-group label {
+            font-size: 13px;
+            color: #94a3b8;
+        }
+        select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 8px;
+            background: #1e293b;
+            color: #fff;
+            border: 1px solid #38bdf8;
+            outline: none;
+            font-family: inherit;
+        }
+        .start-btn {
+            background: #10b981;
+            color: #fff;
+            border: none;
+            padding: 10px 25px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+            box-shadow: 0 4px 0 #059669;
+        }
+        .start-btn:active {
+            transform: translateY(2px);
+            box-shadow: none;
+        }
+        #pause-overlay {
+            display: none;
             color: #38bdf8;
             font-size: 24px;
             font-weight: bold;
-            pointer-events: none;
         }
         #dpad {
             display: grid;
@@ -112,7 +155,6 @@
             align-items: center;
             justify-content: center;
             box-shadow: 0 4px 0 #1e293b;
-            transition: all 0.05s ease;
         }
         .btn:active {
             transform: translateY(4px);
@@ -137,7 +179,34 @@
 
     <div id="canvas-wrapper">
         <canvas id="gameCanvas" width="360" height="360"></canvas>
-        <div id="pause-overlay">موقوفة مؤقتاً ⏸</div>
+        
+        <div id="start-menu" class="overlay">
+            <h2>🐍 لعبة الأفعى المطورة</h2>
+            
+            <div class="select-group">
+                <label>اختر الخلفية:</label>
+                <select id="bg-select">
+                    <option value="dark">ليلي غامق 🌙</option>
+                    <option value="grid">شبكة كلاسيكية 🔲</option>
+                    <option value="jungle">غابة استوائية 🌿</option>
+                </select>
+            </div>
+
+            <div class="select-group">
+                <label>اختر تصميم الأفعى والطعام:</label>
+                <select id="skin-select">
+                    <option value="classic">كلاسيكي + تفاحة واقعية 🍎</option>
+                    <option value="neon">نيون متوهج + مكعب طاقة ⚡</option>
+                    <option value="gold">ملكي ذهبي + ماسة وردية 💎</option>
+                </select>
+            </div>
+
+            <button class="start-btn" id="start-btn">ابدأ اللعبة ▶</button>
+        </div>
+
+        <div id="pause-overlay" class="overlay" style="background: rgba(2, 6, 23, 0.75);">
+            موقوفة مؤقتاً ⏸
+        </div>
     </div>
 
     <div id="dpad">
@@ -155,96 +224,210 @@
     const highScoreElement = document.getElementById('high-score');
     const pauseBtn = document.getElementById('pause-btn');
     const pauseOverlay = document.getElementById('pause-overlay');
+    const startMenu = document.getElementById('start-menu');
+    const startBtn = document.getElementById('start-btn');
 
     const GRID_SIZE = 18;
     const TILE_SIZE = canvas.width / GRID_SIZE;
 
     let snake = [{ x: 9, y: 9 }, { x: 9, y: 10 }, { x: 9, y: 11 }];
     let food = { x: 5, y: 5 };
-    let dx = 0;
-    let dy = -1;
-    let nextDx = 0;
-    let nextDy = -1;
+    let dx = 0; let dy = -1;
+    let nextDx = 0; let nextDy = -1;
     let score = 0;
     let highScore = localStorage.getItem('snake_high_score') || 0;
     let gameLoop = null;
     let speed = 180;
     let isPaused = false;
+    let gameStarted = false;
 
     highScoreElement.innerText = highScore;
 
-    // --- محرك الصوت ---
     let audioCtx = null;
-
     function initAudio() {
-        if (!audioCtx) {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
     }
-
     function playEatSound() {
         initAudio();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-
         osc.type = 'sine';
         osc.frequency.setValueAtTime(600, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(1000, audioCtx.currentTime + 0.1);
-
         gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.1);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
     }
-
     function playGameOverSound() {
         initAudio();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(250, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.4);
-
         gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.4);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.4);
     }
 
-    // --- رسم العناصر ---
-    function drawTile(x, y, color, isHead = false) {
-        ctx.fillStyle = color;
+    function drawBackground() {
+        const bg = document.getElementById('bg-select').value;
+        if (bg === 'jungle') {
+            ctx.fillStyle = '#064e3b';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#022c22';
+        } else if (bg === 'grid') {
+            ctx.fillStyle = '#1e1b4b';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#312e81';
+        } else {
+            ctx.fillStyle = '#020617';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#0f172a';
+        }
+
+        for (let i = 0; i < canvas.width; i += TILE_SIZE) {
+            ctx.beginPath();
+            ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height);
+            ctx.moveTo(0, i); ctx.lineTo(canvas.width, i);
+            ctx.stroke();
+        }
+    }
+
+    function drawCustomFood(x, y, skin) {
         const px = x * TILE_SIZE;
         const py = y * TILE_SIZE;
-        const radius = isHead ? 6 : 4;
-        
-        ctx.beginPath();
-        ctx.roundRect(px + 1, py + 1, TILE_SIZE - 2, TILE_SIZE - 2, radius);
-        ctx.fill();
+        const center = TILE_SIZE / 2;
+
+        ctx.shadowBlur = 0;
+
+        if (skin === 'neon') {
+            ctx.shadowColor = '#22c55e';
+            ctx.shadowBlur = 10;
+            ctx.fillStyle = '#22c55e';
+            ctx.fillRect(px + 3, py + 3, TILE_SIZE - 6, TILE_SIZE - 6);
+            ctx.fillStyle = '#bbf7d0';
+            ctx.fillRect(px + 6, py + 6, TILE_SIZE - 12, TILE_SIZE - 12);
+        } else if (skin === 'gold') {
+            ctx.shadowColor = '#ec4899';
+            ctx.shadowBlur = 8;
+            ctx.fillStyle = '#ec4899';
+            ctx.beginPath();
+            ctx.moveTo(px + center, py + 2);
+            ctx.lineTo(px + TILE_SIZE - 2, py + center);
+            ctx.lineTo(px + center, py + TILE_SIZE - 2);
+            ctx.lineTo(px + 2, py + center);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = '#fbcfe8';
+            ctx.beginPath();
+            ctx.arc(px + center, py + center, 3, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.arc(px + center, py + center + 1, (TILE_SIZE / 2) - 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#fca5a5';
+            ctx.beginPath();
+            ctx.arc(px + center - 3, py + center - 3, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = '#78350f';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(px + center, py + 2);
+            ctx.lineTo(px + center, py + 6);
+            ctx.stroke();
+
+            ctx.fillStyle = '#22c55e';
+            ctx.beginPath();
+            ctx.arc(px + center + 3, py + 3, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+    }
+
+    function drawSnakeSegment(segment, index, skin) {
+        const px = segment.x * TILE_SIZE;
+        const py = segment.y * TILE_SIZE;
+        const center = TILE_SIZE / 2;
+        const isHead = index === 0;
+
+        ctx.shadowBlur = 0;
+
+        if (skin === 'neon') {
+            ctx.shadowColor = isHead ? '#a855f7' : '#06b6d4';
+            ctx.shadowBlur = isHead ? 12 : 6;
+            ctx.fillStyle = isHead ? '#a855f7' : '#06b6d4';
+            ctx.fillRect(px + 1, py + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+
+            if (isHead) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(px + 4, py + 4, 3, 3);
+                ctx.fillRect(px + TILE_SIZE - 7, py + 4, 3, 3);
+            }
+        } else if (skin === 'gold') {
+            ctx.fillStyle = isHead ? '#eab308' : '#fde047';
+            ctx.beginPath();
+            ctx.roundRect(px + 1, py + 1, TILE_SIZE - 2, TILE_SIZE - 2, isHead ? 8 : 4);
+            ctx.fill();
+
+            if (isHead) {
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.arc(px + center, py + center, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        } else {
+            ctx.fillStyle = isHead ? '#38bdf8' : '#0284c7';
+            ctx.beginPath();
+            ctx.arc(px + center, py + center, (TILE_SIZE / 2) - 1, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (isHead) {
+                ctx.fillStyle = '#ffffff';
+                let eyeX1 = px + 4, eyeY1 = py + 4;
+                let eyeX2 = px + TILE_SIZE - 7, eyeY2 = py + 4;
+
+                if (dx === 1) { eyeX1 = px + TILE_SIZE - 6; eyeX2 = px + TILE_SIZE - 6; eyeY1 = py + 4; eyeY2 = py + TILE_SIZE - 7; }
+                else if (dx === -1) { eyeX1 = px + 4; eyeX2 = px + 4; eyeY1 = py + 4; eyeY2 = py + TILE_SIZE - 7; }
+                else if (dy === 1) { eyeY1 = py + TILE_SIZE - 6; eyeY2 = py + TILE_SIZE - 6; eyeX1 = px + 4; eyeX2 = px + TILE_SIZE - 7; }
+
+                ctx.beginPath(); ctx.arc(eyeX1 + 1, eyeY1 + 1, 2.5, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(eyeX2 + 1, eyeY2 + 1, 2.5, 0, Math.PI * 2); ctx.fill();
+
+                ctx.fillStyle = '#000';
+                ctx.beginPath(); ctx.arc(eyeX1 + 1, eyeY1 + 1, 1, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(eyeX2 + 1, eyeY2 + 1, 1, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+        ctx.shadowBlur = 0;
     }
 
     function spawnFood() {
         while (true) {
             food.x = Math.floor(Math.random() * GRID_SIZE);
             food.y = Math.floor(Math.random() * GRID_SIZE);
-            const inSnake = snake.some(segment => segment.x === food.x && segment.y === food.y);
+            const inSnake = snake.some(s => s.x === food.x && s.y === food.y);
             if (!inSnake) break;
         }
     }
 
+    function startGame() {
+        initAudio();
+        startMenu.style.display = 'none';
+        gameStarted = true;
+        resetGame();
+    }
+
     function togglePause() {
+        if (!gameStarted) return;
         initAudio();
         isPaused = !isPaused;
         if (isPaused) {
@@ -257,21 +440,14 @@
     }
 
     function update() {
-        if (isPaused) return;
+        if (isPaused || !gameStarted) return;
 
-        dx = nextDx;
-        dy = nextDy;
-
+        dx = nextDx; dy = nextDy;
         const head = { x: snake[0].x + dx, y: snake[0].y + dy };
 
-        if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) {
-            return gameOver();
-        }
-
+        if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) return gameOver();
         for (let i = 0; i < snake.length; i++) {
-            if (snake[i].x === head.x && snake[i].y === head.y) {
-                return gameOver();
-            }
+            if (snake[i].x === head.x && snake[i].y === head.y) return gameOver();
         }
 
         snake.unshift(head);
@@ -294,31 +470,21 @@
     }
 
     function draw() {
-        ctx.fillStyle = '#020617';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        drawBackground();
+        const skin = document.getElementById('skin-select').value;
 
-        ctx.strokeStyle = '#0f172a';
-        for (let i = 0; i < canvas.width; i += TILE_SIZE) {
-            ctx.beginPath();
-            ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height);
-            ctx.moveTo(0, i); ctx.lineTo(canvas.width, i);
-            ctx.stroke();
-        }
-
-        drawTile(food.x, food.y, '#ef4444');
+        drawCustomFood(food.x, food.y, skin);
 
         snake.forEach((segment, index) => {
-            const color = index === 0 ? '#38bdf8' : '#0284c7';
-            drawTile(segment.x, segment.y, color, index === 0);
+            drawSnakeSegment(segment, index, skin);
         });
     }
 
     function setDirection(newDx, newDy) {
-        if (isPaused) return;
+        if (isPaused || !gameStarted) return;
         initAudio();
         if (newDx !== -dx || newDy !== -dy) {
-            nextDx = newDx;
-            nextDy = newDy;
+            nextDx = newDx; nextDy = newDy;
         }
     }
 
@@ -327,14 +493,14 @@
         clearInterval(gameLoop);
         setTimeout(() => {
             alert(`انتهت اللعبة!\nالنتيجة: ${score}`);
-            resetGame();
+            startMenu.style.display = 'flex';
+            gameStarted = false;
         }, 100);
     }
 
     function resetGame() {
         snake = [{ x: 9, y: 9 }, { x: 9, y: 10 }, { x: 9, y: 11 }];
-        dx = 0; dy = -1;
-        nextDx = 0; nextDy = -1;
+        dx = 0; dy = -1; nextDx = 0; nextDy = -1;
         score = 0;
         isPaused = false;
         pauseBtn.innerText = 'توقف ⏸';
@@ -342,18 +508,17 @@
         scoreElement.innerText = score;
         spawnFood();
         draw();
+        if (gameLoop) clearInterval(gameLoop);
         gameLoop = setInterval(update, speed);
     }
 
-    // --- التحكم وتحديد الاتجاهات ---
+    startBtn.onclick = startGame;
     pauseBtn.onclick = togglePause;
 
     window.addEventListener('keydown', e => {
+        if (!gameStarted) return;
         initAudio();
-        if (e.key === ' ' || e.code === 'Space') {
-            togglePause();
-            return;
-        }
+        if (e.key === ' ' || e.code === 'Space') { togglePause(); return; }
         switch (e.key) {
             case 'ArrowUp': case 'w': case 'W': setDirection(0, -1); break;
             case 'ArrowDown': case 's': case 'S': setDirection(0, 1); break;
@@ -362,38 +527,33 @@
         }
     });
 
+    // تم عكس اتجاهات أزرار التحكم واللمس بناءً على طلبك
     document.getElementById('btn-up').onclick = () => setDirection(0, -1);
     document.getElementById('btn-down').onclick = () => setDirection(0, 1);
     document.getElementById('btn-left').onclick = () => setDirection(1, 0);
     document.getElementById('btn-right').onclick = () => setDirection(-1, 0);
 
-    let touchStartX = 0;
-    let touchStartY = 0;
-
+    let touchStartX = 0; let touchStartY = 0;
     canvas.addEventListener('touchstart', e => {
+        if (!gameStarted) return;
         initAudio();
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
     });
 
     canvas.addEventListener('touchend', e => {
+        if (!gameStarted) return;
         const diffX = e.changedTouches[0].clientX - touchStartX;
         const diffY = e.changedTouches[0].clientY - touchStartY;
 
         if (Math.abs(diffX) > Math.abs(diffY)) {
-            if (Math.abs(diffX) > 30) {
-                setDirection(diffX > 0 ? -1 : 1, 0);
-            }
+            if (Math.abs(diffX) > 30) setDirection(diffX > 0 ? -1 : 1, 0);
         } else {
-            if (Math.abs(diffY) > 30) {
-                setDirection(0, diffY > 0 ? 1 : -1);
-            }
+            if (Math.abs(diffY) > 30) setDirection(0, diffY > 0 ? 1 : -1);
         }
     });
 
-    spawnFood();
-    draw();
-    gameLoop = setInterval(update, speed);
+    drawBackground();
 </script>
 
 </body>
